@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bonitillo POS</title>
+<style>
+  :root{
+    --bg:#f5f6fb; --surface:#ffffff; --surface2:#f0f2f9; --text:#0f172a; --muted:#64748b; --line:#e6e9f2;
+    --primary:#6366f1; --primary2:#8b5cf6; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
+    --grad:linear-gradient(135deg,#6366f1,#8b5cf6);
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.07);
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  [data-theme="dark"]{
+    --bg:#0b1020; --surface:#131a2e; --surface2:#1a2340; --text:#e8ecf8; --muted:#8d98b5; --line:#243052;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;
+       transition:background .4s var(--ease),color .4s var(--ease);-webkit-font-smoothing:antialiased}
+  /* animated background blobs */
+  .blobs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .blobs i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.28;animation:float 18s ease-in-out infinite}
+  .blobs i:nth-child(1){width:420px;height:420px;background:#6366f1;top:-120px;left:-80px}
+  .blobs i:nth-child(2){width:360px;height:360px;background:#ec4899;bottom:-100px;right:-60px;animation-delay:-6s}
+  .blobs i:nth-child(3){width:300px;height:300px;background:#06b6d4;top:40%;left:55%;animation-delay:-11s;opacity:.18}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,30px) scale(1.08)}66%{transform:translate(-30px,50px) scale(.95)}}
+
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  /* Sidebar */
+  .sidebar{position:sticky;top:0;height:100vh;padding:22px 16px;display:flex;flex-direction:column;gap:22px;
+           background:color-mix(in srgb,var(--surface) 78%,transparent);backdrop-filter:blur(16px);border-right:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:12px;padding:4px 8px;font-weight:800;font-size:19px;letter-spacing:-.02em}
+  .logo{width:38px;height:38px;border-radius:12px;background:var(--grad);display:grid;place-items:center;color:#fff;box-shadow:0 8px 20px rgba(99,102,241,.45);animation:pulse 3s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 8px 20px rgba(99,102,241,.45)}50%{box-shadow:0 8px 30px rgba(139,92,246,.75)}}
+  .nav{display:flex;flex-direction:column;gap:6px}
+  .nav button{display:flex;align-items:center;gap:12px;padding:11px 14px;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;
+              border-radius:12px;cursor:pointer;transition:all .25s var(--ease);position:relative;text-align:left}
+  .nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none;transition:transform .3s var(--ease)}
+  .nav button:hover{background:var(--surface2);color:var(--text);transform:translateX(3px)}
+  .nav button:hover svg{transform:scale(1.15) rotate(-4deg)}
+  .nav button.active{background:var(--grad);color:#fff;box-shadow:0 8px 20px rgba(99,102,241,.4);transform:none}
+  .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+  .theme-btn{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-weight:600;cursor:pointer;transition:all .25s var(--ease)}
+  .theme-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .theme-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .5s var(--ease)}
+  .theme-btn:hover svg{transform:rotate(180deg)}
+
+  main{padding:30px 34px 50px;max-width:1280px;width:100%;margin:0 auto}
+  .view{animation:viewIn .5s var(--ease) both}
+  @keyframes viewIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .page-head h1{margin:0;font-size:28px;letter-spacing:-.03em}
+  .page-head p{margin:4px 0 0;color:var(--muted)}
+  h3{margin:0 0 14px;font-size:16px;letter-spacing:-.01em}
+  .muted{color:var(--muted)}
+
+  /* Cards */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .4s}
+  .card.hover:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(99,102,241,.16)}
+  .grid{display:grid;gap:16px}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(215px,1fr));margin-bottom:16px}
+  .stagger>*{animation:viewIn .55s var(--ease) both;animation-delay:calc(var(--i,0)*70ms)}
+  .stat{display:flex;gap:14px;align-items:center}
+  .ico{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;color:#fff;flex:none}
+  .ico svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .g1{background:linear-gradient(135deg,#6366f1,#8b5cf6)}.g2{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
+  .g3{background:linear-gradient(135deg,#10b981,#34d399)}.g4{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+  .stat .label{color:var(--muted);font-size:13px;font-weight:500}
+  .stat .value{font-size:27px;font-weight:800;letter-spacing:-.03em;margin-top:2px}
+  .stat .sub{font-size:12px;color:var(--muted)}
+  .hero{background:var(--grad);color:#fff;border:0;position:relative;overflow:hidden;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .hero::after{content:"";position:absolute;right:-60px;top:-80px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.14);animation:float 12s ease-in-out infinite}
+  .hero h2{margin:0 0 4px;font-size:24px;letter-spacing:-.02em}.hero p{margin:0;opacity:.9}
+  .hero .acts{display:flex;gap:10px;position:relative;z-index:1;flex-wrap:wrap}
+  .two{grid-template-columns:1.4fr 1fr}
+  .history-grid{grid-template-columns:minmax(260px,1fr) 2.2fr;align-items:start}
+  @media(max-width:1000px){.two,.history-grid{grid-template-columns:1fr}}
+
+  /* Chart */
+  .chart{display:flex;align-items:flex-end;gap:12px;height:190px;padding-top:10px}
+  .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;position:relative}
+  .bar{width:100%;max-width:46px;height:0;border-radius:10px 10px 5px 5px;background:var(--surface2);transition:height .9s var(--ease);transition-delay:calc(var(--i)*80ms);position:relative;min-height:0}
+  .bar.today{background:var(--grad);box-shadow:0 8px 20px rgba(99,102,241,.35)}
+  .bar.has{background:linear-gradient(180deg,#a5b4fc,#818cf8)}
+  .bar.today.has{background:var(--grad)}
+  .col:hover .bar{filter:brightness(1.12)}
+  .tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translate(-50%,6px);background:#111827;color:#fff;font-size:12px;padding:4px 8px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:all .2s var(--ease);z-index:3}
+  .col:hover .tip{opacity:1;transform:translate(-50%,0)}
+  .col small{color:var(--muted);font-size:12px;font-weight:600}
+
+  /* Lists */
+  .li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px dashed var(--line);animation:viewIn .5s var(--ease) both;animation-delay:calc(var(--i,0)*50ms)}
+  .li:last-child{border-bottom:0}
+
+  /* Toolbar / inputs */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .toolbar .grow{flex:1}
+  input,select{padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;font:inherit;background:var(--surface);color:var(--text);transition:border-color .2s,box-shadow .2s,background .4s}
+  input:focus,select:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 4px rgba(99,102,241,.18)}
+  .search{position:relative;flex:1;min-width:210px}
+  .search input{width:100%;padding-left:40px}
+  .search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round}
+  .check{display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:500;cursor:pointer}
+  .check input{width:18px;height:18px;accent-color:var(--primary)}
+
+  /* Buttons */
+  .btn{position:relative;overflow:hidden;border:0;border-radius:12px;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer;color:#fff;background:var(--grad);
+       box-shadow:0 6px 16px rgba(99,102,241,.35);transition:transform .2s var(--ease),box-shadow .2s var(--ease),filter .2s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(99,102,241,.42)}
+  .btn:active{transform:translateY(0) scale(.97)}
+  .btn.sec{background:var(--surface2);color:var(--text);box-shadow:none}
+  .btn.sec:hover{box-shadow:var(--shadow)}
+  .btn.danger{background:linear-gradient(135deg,#ef4444,#f97316);box-shadow:0 6px 16px rgba(239,68,68,.3)}
+  .btn.ok{background:linear-gradient(135deg,#10b981,#34d399);box-shadow:0 6px 16px rgba(16,185,129,.3)}
+  .btn.white{background:#fff;color:#4f46e5;box-shadow:0 6px 16px rgba(0,0,0,.15)}
+  .btn.ghost-w{background:rgba(255,255,255,.18);box-shadow:none}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}
+  .btn.block{width:100%;padding:14px;font-size:16px}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none}
+  .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);transform:scale(0);animation:ripple .6s ease-out;pointer-events:none}
+  @keyframes ripple{to{transform:scale(4);opacity:0}}
+  .icon-btn{border:0;background:var(--surface2);color:var(--muted);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;transition:all .2s var(--ease)}
+  .icon-btn:hover{background:var(--danger);color:#fff;transform:rotate(90deg)}
+
+  /* Table */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:13px 16px;vertical-align:middle}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);font-weight:700;white-space:nowrap}
+  td{border-top:1px solid var(--line)}
+  .num{text-align:right}
+  tbody tr{transition:background .2s}
+  tbody tr:hover{background:color-mix(in srgb,var(--primary) 7%,transparent)}
+  tbody tr.rowin{animation:viewIn .45s var(--ease) both;animation-delay:calc(var(--i,0)*35ms)}
+  tr.off td{opacity:.5}
+  .empty{padding:36px;text-align:center;color:var(--muted)}
+  .empty b{display:block;font-size:34px;margin-bottom:6px}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .b-ok{background:rgba(16,185,129,.14);color:#059669}
+  .b-low{background:rgba(245,158,11,.16);color:#d97706}
+  .b-low::before,.b-out::before{animation:blink 1.4s ease-in-out infinite}
+  .b-out{background:rgba(239,68,68,.14);color:#dc2626}
+  .b-off{background:var(--surface2);color:var(--muted)}
+  @keyframes blink{50%{opacity:.2;transform:scale(1.5)}}
+  .meter{width:80px;height:6px;background:var(--surface2);border-radius:9px;overflow:hidden;margin-top:6px;margin-left:auto}
+  .meter i{display:block;height:100%;border-radius:9px;background:var(--ok);animation:grow .8s var(--ease) both;transform-origin:left}
+  .meter i.low{background:var(--warn)}.meter i.out{background:var(--danger)}
+  @keyframes grow{from{transform:scaleX(0)}}
+
+  /* Checkout */
+  .checkout{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start}
+  @media(max-width:1000px){.checkout{grid-template-columns:1fr}}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{border:1.5px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 14px;border-radius:99px;font:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:all .25s var(--ease)}
+  .chip:hover{transform:translateY(-2px);color:var(--text)}
+  .chip.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 6px 14px rgba(99,102,241,.35)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow);
+        animation:viewIn .5s var(--ease) both;animation-delay:calc(var(--i,0)*40ms);transition:transform .3s var(--ease),box-shadow .3s var(--ease),border-color .3s}
+  .tile:hover{transform:translateY(-5px);box-shadow:0 18px 40px rgba(99,102,241,.18);border-color:color-mix(in srgb,var(--primary) 45%,var(--line))}
+  .tile.disabled{opacity:.55}
+  .tile-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .cat{font-size:12px;color:var(--muted);font-weight:600}
+  .tile-name{font-weight:700;font-size:16px;line-height:1.25;min-height:40px}
+  .tile-price{font-size:22px;font-weight:800;letter-spacing:-.03em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tile-foot{display:flex;gap:8px;align-items:center;margin-top:4px}
+  .stepper{display:flex;align-items:center;background:var(--surface2);border-radius:12px;overflow:hidden}
+  .stepper button{border:0;background:transparent;color:var(--text);width:30px;height:34px;font-size:17px;font-weight:700;cursor:pointer;transition:background .2s}
+  .stepper button:hover{background:color-mix(in srgb,var(--primary) 20%,transparent)}
+  .stepper input{width:42px;text-align:center;border:0;background:transparent;padding:6px 0;border-radius:0;box-shadow:none!important;-moz-appearance:textfield}
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none}
+  .stepper .q{min-width:28px;text-align:center;font-weight:700}
+  .cart{position:sticky;top:20px}
+  .cart-item{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px dashed var(--line);transition:all .25s var(--ease);max-height:90px;overflow:hidden}
+  .cart-item.pop{animation:pop .45s var(--ease)}
+  .cart-item.removing{opacity:0;transform:translateX(40px);max-height:0;padding:0;border:0}
+  @keyframes pop{0%{transform:scale(.85);background:rgba(99,102,241,.2)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+  .ci-sub{font-weight:700;min-width:70px;text-align:right}
+  .sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+  .total{font-size:30px;font-weight:800;letter-spacing:-.03em;display:inline-block;animation:bump .4s var(--ease)}
+  @keyframes bump{40%{transform:scale(1.12);color:var(--primary)}}
+  .change{font-size:20px;font-weight:800;color:var(--ok);transition:color .2s}
+  .change.bad{color:var(--danger)}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px}
+  .err{color:var(--danger);font-size:13px;font-weight:600;min-height:20px;margin:4px 0}
+  .err:not(:empty){animation:shake .4s}
+  @keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:13px;color:var(--muted);font-weight:600}
+
+  /* Dialogs */
+  dialog{border:0;border-radius:24px;padding:26px;width:min(460px,92vw);background:var(--surface);color:var(--text);box-shadow:0 30px 80px rgba(0,0,0,.35);overflow:hidden}
+  dialog[open]{animation:dlg .35s cubic-bezier(.2,.9,.3,1.25)}
+  dialog::backdrop{background:rgba(8,12,28,.55);backdrop-filter:blur(6px);animation:fade .3s}
+  @keyframes dlg{from{opacity:0;transform:translateY(24px) scale(.92)}}
+  @keyframes fade{from{opacity:0}}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+  .check-anim{width:70px;height:70px;margin:0 auto 10px;display:block}
+  .check-anim circle{fill:none;stroke:var(--ok);stroke-width:4;stroke-dasharray:190;stroke-dashoffset:190;animation:draw .6s .1s ease forwards}
+  .check-anim path{fill:none;stroke:var(--ok);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:50;stroke-dashoffset:50;animation:draw .4s .6s ease forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .receipt-title{text-align:center;margin:0 0 4px;font-size:22px}
+  .receipt-items{margin:14px 0;padding:14px;background:var(--surface2);border-radius:14px;font-size:14px}
+  .receipt-items div{display:flex;justify-content:space-between;padding:3px 0}
+  .confetti-box{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .confetti{position:absolute;left:50%;top:30%;width:9px;height:14px;border-radius:2px;opacity:0;animation:conf 1.4s var(--ease) forwards}
+  @keyframes conf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+
+  /* Toasts */
+  #toasts{position:fixed;right:22px;bottom:22px;display:flex;flex-direction:column;gap:10px;z-index:100;pointer-events:none}
+  .toast{display:flex;gap:10px;align-items:center;padding:13px 18px;border-radius:14px;background:#111827;color:#fff;font-weight:600;box-shadow:0 14px 34px rgba(0,0,0,.3);animation:toastIn .4s var(--ease);max-width:340px;border-left:4px solid var(--ok)}
+  .toast.error{border-left-color:var(--danger)}
+  .toast.out{animation:toastOut .3s ease forwards}
+  @keyframes toastIn{from{opacity:0;transform:translateX(60px) scale(.9)}}
+  @keyframes toastOut{to{opacity:0;transform:translateX(60px)}}
+
+  details summary{cursor:pointer;color:var(--primary);font-weight:600;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸ ";display:inline-block;transition:transform .2s}
+  details[open] summary::before{transform:rotate(90deg)}
+  details ul{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--muted);animation:viewIn .3s var(--ease)}
+
+  /* Mobile */
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;z-index:40;flex-direction:row;padding:8px 10px;border-right:0;border-top:1px solid var(--line);gap:6px;justify-content:space-between}
+    .brand,.theme-btn span{display:none}
+    .side-foot{margin:0}.theme-btn{padding:10px}
+    .nav{flex-direction:row;flex:1;justify-content:space-around}
+    .nav button{flex-direction:column;gap:3px;padding:7px 8px;font-size:11px;align-items:center}
+    .nav button:hover{transform:none}
+    main{padding:20px 16px 110px}
+    #toasts{bottom:90px;right:12px;left:12px}.toast{max-width:none}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important;transition-delay:0s!important}
+  }
+</style>
+</head>
+<body>
+
+
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7nVSTnZ_n7VKI2VNkqW0nJOQdbJBDPOA",
+    authDomain: "bonitilloshop.firebaseapp.com",
+    projectId: "bonitilloshop",
+    storageBucket: "bonitilloshop.firebasestorage.app",
+    messagingSenderId: "833997287634",
+    appId: "1:833997287634:web:289c5948aff467447afd0b",
+    measurementId: "G-E45MDS5GF3"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+
+
+<div class="blobs"><i></i><i></i><i></i></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+      Bonitillo POS
+    </div>
+    <nav class="nav" id="nav">
+      <button data-view="dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span>Dashboard</span></button>
+      <button data-view="products"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.5L12 12l8.7-4.5M12 12v9"/></svg><span>Products</span></button>
+      <button data-view="checkout"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h10.2L20 7H6"/><circle cx="9" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/></svg><span>Checkout</span></button>
+      <button data-view="history"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>History</span></button>
+    </nav>
+    <div class="side-foot">
+      <button class="theme-btn" id="themeBtn" aria-label="Toggle theme"><span id="themeLabel">Dark mode</span>
+        <svg viewBox="0 0 24 24" id="themeIcon"></svg></button>
+    </div>
+  </aside>
+  <main id="app"></main>
+</div>
+<div id="toasts"></div>
+
+<dialog id="productDialog">
+  <form method="dialog" id="productForm" novalidate>
+    <h3 id="pdTitle" style="font-size:20px">Add product</h3>
+    <div class="field"><label for="pName">Product name</label><input id="pName" maxlength="80" placeholder="e.g. Bottled Water"></div>
+    <div class="field"><label for="pCat">Category</label><input id="pCat" list="catList" maxlength="40" placeholder="e.g. Beverages"><datalist id="catList"></datalist></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label for="pPrice">Price (₱)</label><input id="pPrice" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label for="pStock">Stock</label><input id="pStock" type="number" step="1" min="0" placeholder="0"></div>
+    </div>
+    <div class="err" id="pErr"></div>
+    <div class="actions">
+      <button type="button" class="btn sec" id="pCancel">Cancel</button>
+      <button type="submit" class="btn">Save product</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirmDialog">
+  <form method="dialog" id="confirmForm">
+    <h3 id="cfTitle" style="font-size:20px">Are you sure?</h3>
+    <p id="cfMsg" class="muted" style="margin:0 0 14px"></p>
+    <label class="check" id="cfOptWrap" style="margin-bottom:12px;display:none"><input type="checkbox" id="cfOpt" checked><span id="cfOptLabel"></span></label>
+    <div class="actions">
+      <button type="button" class="btn sec" id="cfNo">Cancel</button>
+      <button type="submit" class="btn danger" id="cfYes">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="cashDialog">
+  <form id="cashForm" novalidate>
+    <h3 style="font-size:20px">Edit cash received</h3>
+    <p class="muted" id="cdInfo" style="margin:0 0 14px"></p>
+    <div class="field"><label for="cdCash">Cash received (₱)</label><input id="cdCash" type="number" min="0" step="0.01"></div>
+    <div class="err" id="cdErr"></div>
+    <div class="actions">
+      <button type="button" class="btn sec" id="cdCancel">Cancel</button>
+      <button type="submit" class="btn">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="receiptDialog">
+  <div class="confetti-box" id="confettiBox"></div>
+  <svg class="check-anim" viewBox="0 0 70 70"><circle cx="35" cy="35" r="30"/><path d="M22 36l9 9 17-19"/></svg>
+  <h3 class="receipt-title">Sale completed!</h3>
+  <div id="receiptBody"></div>
+  <div class="actions"><button class="btn ok block" id="receiptClose">Start new sale</button></div>
+</dialog>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= Data (stored in Firestore through the Flask API) ================= */
+let state = {products:[], sales:[], lowStock:5}; // in-memory copy of what's in Firestore
+async function api(path, opts={}){
+  const res = await fetch('/api' + path, {
+    method: opts.method || 'GET',
+    headers: {'Content-Type':'application/json'},
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+  });
+  let data = null; try{ data = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));
+  return data;
+}
+async function loadAll(){
+  const [products, sales, settings] = await Promise.all([api('/products?status=all'), api('/sales'), api('/settings')]);
+  state.products = products;
+  state.sales = sales.sales.slice().reverse(); // API is newest-first; the UI expects oldest-first
+  state.lowStock = settings.lowStock;
+}
+
+/* ================= Helpers ================= */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toCents = n => Math.round(Number(n) * 100);
+const money = c => '₱' + (c/100).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pad = n => String(n).padStart(2,'0');
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayKey = () => dateKey(new Date());
+const fmtDateTime = iso => new Date(iso).toLocaleString('en-PH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+const fmtDate = key => { const [y,m,d] = key.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'}); };
+const getProduct = id => state.products.find(p => p.id === id);
+const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isLow = p => p.active && p.stock <= state.lowStock;
+const icon = {
+  cash:'<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  receipt:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/></svg>',
+  box:'<svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.5L12 12l8.7-4.5M12 12v9"/></svg>',
+  alert:'<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'
+};
+
+function toast(msg, isErr){
+  const t = document.createElement('div');
+  t.className = 'toast' + (isErr ? ' error' : '');
+  t.innerHTML = `<span>${isErr?'⚠️':'✅'}</span><span>${esc(msg)}</span>`;
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(), 320); }, 3000);
+}
+function stockBadge(p){
+  if(!p.active) return '<span class="badge b-off">Inactive</span>';
+  if(p.stock <= 0) return '<span class="badge b-out">Out of stock</span>';
+  if(p.stock <= state.lowStock) return '<span class="badge b-low">Low stock</span>';
+  return '<span class="badge b-ok">In stock</span>';
+}
+/* animated number counters */
+function runCounters(root=document){
+  root.querySelectorAll('[data-count]').forEach(el=>{
+    const to = Number(el.dataset.count), money_ = el.dataset.mode === 'money';
+    const fmt = v => money_ ? money(v) : Math.round(v).toLocaleString();
+    if(reduced() || to === 0){ el.textContent = fmt(to); return; }
+    const t0 = performance.now(), dur = 1000;
+    (function tick(now){
+      const p = Math.min(1,(now-t0)/dur), e = 1 - Math.pow(1-p,3);
+      el.textContent = fmt(to*e);
+      if(p<1) requestAnimationFrame(tick); else el.textContent = fmt(to);
+    })(t0);
+  });
+}
+/* ripple on buttons */
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.btn'); if(!b || b.disabled) return;
+  const r = b.getBoundingClientRect(), d = Math.max(r.width,r.height);
+  const s = document.createElement('span'); s.className = 'ripple';
+  s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
+  b.appendChild(s); s.addEventListener('animationend', ()=>s.remove());
+});
+
+/* ================= Theme ================= */
+const moon = '<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>';
+const sun = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  $('#themeIcon').innerHTML = t === 'dark' ? sun : moon;
+  $('#themeLabel').textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+  try{ localStorage.setItem('pos_theme', t); }catch(e){}
+}
+(function(){
+  let t = null; try{ t = localStorage.getItem('pos_theme'); }catch(e){}
+  if(!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  setTheme(t);
+})();
+$('#themeBtn').onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+
+/* ================= Navigation ================= */
+let currentView = 'dashboard';
+let cart = []; // {pid, qty}
+function go(view){
+  currentView = view;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  ({dashboard:renderDashboard, products:renderProducts, checkout:renderCheckout, history:renderHistory})[view]();
+  window.scrollTo({top:0});
+}
+$('#nav').addEventListener('click', e => { const b = e.target.closest('button'); if(b && b.dataset.view !== currentView) go(b.dataset.view); });
+
+/* ================= Module 1: Dashboard ================= */
+function renderDashboard(){
+  const tk = todayKey();
+  const todays = state.sales.filter(s => dateKey(new Date(s.ts)) === tk);
+  const totalC = todays.reduce((a,s)=>a+s.totalCents,0);
+  const active = state.products.filter(p=>p.active).length;
+  const low = state.products.filter(isLow).sort((a,b)=>a.stock-b.stock);
+  const recent = todays.slice().reverse().slice(0,5);
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+
+  // last 7 days
+  const days = [];
+  for(let i=6;i>=0;i--){ const d = new Date(); d.setDate(d.getDate()-i); days.push({key:dateKey(d), label:d.toLocaleDateString('en-PH',{weekday:'short'}), c:0}); }
+  state.sales.forEach(s => { const k = dateKey(new Date(s.ts)); const d = days.find(x=>x.key===k); if(d) d.c += s.totalCents; });
+  const max = Math.max(...days.map(d=>d.c), 1);
+
+  $('#app').innerHTML = `<div class="view">
+    <div class="card hero">
+      <div style="position:relative;z-index:1"><h2>${greet} 👋</h2><p>${fmtDate(tk)} · here's how your store is doing today.</p></div>
+      <div class="acts"><button class="btn white" data-go="checkout">+ New sale</button><button class="btn ghost-w" data-go="products">Manage products</button></div>
+    </div>
+    <div class="grid stats stagger">
+      <div class="card hover stat" style="--i:0"><div class="ico g1">${icon.cash}</div><div><div class="label">Today's total sales</div><div class="value" data-count="${totalC}" data-mode="money">0</div></div></div>
+      <div class="card hover stat" style="--i:1"><div class="ico g2">${icon.receipt}</div><div><div class="label">Transactions today</div><div class="value" data-count="${todays.length}">0</div></div></div>
+      <div class="card hover stat" style="--i:2"><div class="ico g3">${icon.box}</div><div><div class="label">Products</div><div class="value" data-count="${state.products.length}">0</div><div class="sub">${active} active</div></div></div>
+      <div class="card hover stat" style="--i:3"><div class="ico g4">${icon.alert}</div><div><div class="label">Low-stock alerts</div><div class="value" data-count="${low.length}">0</div><div class="sub">at or below ${state.lowStock} units</div></div></div>
+    </div>
+    <div class="grid two">
+      <div class="card"><h3>Sales — last 7 days</h3>
+        <div class="chart">${days.map((d,i)=>`
+          <div class="col"><div class="tip">${money(d.c)}</div>
+            <div class="bar ${d.key===tk?'today':''} ${d.c?'has':''}" data-h="${d.c? Math.max(6, d.c/max*100) : 3}" style="--i:${i}"></div>
+            <small>${d.key===tk?'Today':d.label}</small></div>`).join('')}</div>
+      </div>
+      <div class="card"><h3>⚠️ Low-stock items</h3>
+        ${low.length ? low.slice(0,6).map((p,i)=>`<div class="li" style="--i:${i}"><span><strong>${esc(p.name)}</strong> <span class="muted">· ${esc(p.category)}</span></span>${p.stock===0?'<span class="badge b-out">Out</span>':`<span class="badge b-low">${p.stock} left</span>`}</div>`).join('') : '<div class="empty"><b>🎉</b>Everything is well stocked.</div>'}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>Recent transactions today</h3>
+      ${recent.length ? recent.map((s,i)=>`<div class="li" style="--i:${i}"><span><strong>#${s.number}</strong> <span class="muted">· ${new Date(s.ts).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})} · ${s.items.reduce((a,x)=>a+x.qty,0)} item(s)</span></span><strong>${money(s.totalCents)}</strong></div>`).join('') : '<div class="empty"><b>🧾</b>No sales yet today.</div>'}
+    </div>
+    ${state.products.length===0 ? `<div class="card" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span><strong>Getting started:</strong> add your first products, or try the app with sample data.</span><button class="btn" id="seedBtn">Load sample data</button></div>`:''}
+  </div>`;
+  runCounters();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ document.querySelectorAll('.bar').forEach(b=>{ b.style.height = b.dataset.h + '%'; }); }));
+  $('#app').querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+  const sb = $('#seedBtn'); if(sb) sb.onclick = seedData;
+}
+async function seedData(){
+  const sample = [['Bottled Water 500ml','Beverages',20,40],['Instant Noodles','Food',15,30],['Coffee Sachet','Beverages',8,60],['Bread Loaf','Food',55,4],['Notebook','School Supplies',35,12],['Ballpen','School Supplies',10,3]];
+  try{
+    for(const [name,category,price,stock] of sample){
+      state.products.push(await api('/products', {method:'POST', body:{name,category,price,stock}}));
+    }
+    toast('Sample products loaded.');
+  }catch(e){ toast(e.message, true); }
+  go('dashboard');
+}
+
+/* ================= Module 2: Products ================= */
+let pf = {q:'', cat:'', status:'active', lowOnly:false};
+function renderProducts(){
+  $('#app').innerHTML = `<div class="view">
+    <div class="page-head"><div><h1>Products &amp; Inventory</h1><p>Add, edit, search and monitor your stock.</p></div>
+      <button class="btn" id="addProd">+ Add product</button></div>
+    <div class="toolbar">
+      <div class="search">${icon.search}<input id="pfQ" type="search" placeholder="Search by name or category…" value="${esc(pf.q)}"></div>
+      <select id="pfCat"></select>
+      <select id="pfStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select>
+      <label class="check"><input type="checkbox" id="pfLow"> Low stock only</label>
+      <label class="check">Low-stock level <input type="number" id="lowLevel" min="0" step="1" value="${state.lowStock}" style="width:78px;padding:8px 10px"></label>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Product</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th>Status</th><th class="num">Actions</th></tr></thead>
+      <tbody id="prodBody"></tbody>
+    </table></div></div>`;
+  $('#pfStatus').value = pf.status; $('#pfLow').checked = pf.lowOnly;
+  refreshCatFilter(); drawProducts(true);
+  $('#pfQ').oninput = e => { pf.q = e.target.value; drawProducts(false); };
+  $('#pfCat').onchange = e => { pf.cat = e.target.value; drawProducts(true); };
+  $('#pfStatus').onchange = e => { pf.status = e.target.value; drawProducts(true); };
+  $('#pfLow').onchange = e => { pf.lowOnly = e.target.checked; drawProducts(true); };
+  $('#lowLevel').onchange = async e => {
+    const v = parseInt(e.target.value,10);
+    if(isNaN(v) || v < 0){ e.target.value = state.lowStock; toast('Enter a whole number, 0 or more.', true); return; }
+    try{ await api('/settings/low-stock', {method:'PUT', body:{lowStock:v}}); }
+    catch(err){ e.target.value = state.lowStock; return toast(err.message, true); }
+    state.lowStock = v; drawProducts(false); toast('Low-stock level updated.');
+  };
+  $('#addProd').onclick = () => openProductDialog();
+  $('#prodBody').onclick = async e => {
+    const b = e.target.closest('button[data-act]'); if(!b) return;
+    const p = getProduct(b.dataset.id); if(!p) return;
+    if(b.dataset.act === 'edit') openProductDialog(p);
+    if(b.dataset.act === 'toggle'){
+      try{ await api(`/products/${p.id}/active`, {method:'PATCH', body:{active:!p.active}}); }
+      catch(err){ return toast(err.message, true); }
+      p.active = !p.active;
+      if(!p.active) cart = cart.filter(c => c.pid !== p.id);
+      toast(p.active ? `"${p.name}" reactivated.` : `"${p.name}" deactivated.`); drawProducts(false);
+    }
+    if(b.dataset.act === 'delete'){
+      const r = await askConfirm({title:'Delete product?', message:`"${p.name}" will be permanently removed. Past sales keep their records.`, yes:'Delete'});
+      if(!r) return;
+      try{ await api(`/products/${p.id}`, {method:'DELETE'}); }
+      catch(err){ return toast(err.message, true); }
+      state.products = state.products.filter(x => x.id !== p.id);
+      cart = cart.filter(c => c.pid !== p.id);
+      refreshCatFilter(); drawProducts(false); toast(`"${p.name}" deleted.`);
+    }
+  };
+}
+
+/* reusable confirm dialog -> resolves null (cancelled) or {option: checkboxValue} */
+function askConfirm({title, message, yes='Delete', option}){
+  return new Promise(resolve => {
+    const d = $('#confirmDialog');
+    $('#cfTitle').textContent = title; $('#cfMsg').textContent = message; $('#cfYes').textContent = yes;
+    $('#cfOptWrap').style.display = option ? 'flex' : 'none';
+    if(option){ $('#cfOptLabel').textContent = option; $('#cfOpt').checked = true; }
+    const finish = v => { d.close(); resolve(v); };
+    $('#cfNo').onclick = () => finish(null);
+    $('#confirmForm').onsubmit = e => { e.preventDefault(); finish({option: $('#cfOpt').checked}); };
+    d.oncancel = () => resolve(null); // Esc key
+    d.showModal();
+  });
+}
+function categories(){ return [...new Set(state.products.map(p=>p.category))].sort((a,b)=>a.localeCompare(b)); }
+function refreshCatFilter(){
+  const sel = $('#pfCat'); if(!sel) return;
+  const cats = categories();
+  if(pf.cat && !cats.includes(pf.cat)) pf.cat = '';
+  sel.innerHTML = '<option value="">All categories</option>' + cats.map(c=>`<option ${c===pf.cat?'selected':''}>${esc(c)}</option>`).join('');
+}
+function drawProducts(animate){
+  const q = pf.q.trim().toLowerCase();
+  const rows = state.products.filter(p =>
+    (pf.status==='all' || (pf.status==='active') === p.active) &&
+    (!pf.cat || p.category === pf.cat) && (!pf.lowOnly || isLow(p)) &&
+    (!q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+  ).sort((a,b)=>a.name.localeCompare(b.name));
+  $('#prodBody').innerHTML = rows.length ? rows.map((p,i)=>{
+    const pct = Math.min(100, Math.round(p.stock / Math.max(1, state.lowStock*4) * 100));
+    const cls = p.stock<=0 ? 'out' : p.stock<=state.lowStock ? 'low' : '';
+    return `<tr class="${p.active?'':'off'} ${animate?'rowin':''}" style="--i:${Math.min(i,14)}">
+      <td><strong>${esc(p.name)}</strong></td><td><span class="cat">${esc(p.category)}</span></td>
+      <td class="num"><strong>${money(toCents(p.price))}</strong></td>
+      <td class="num">${p.stock}<div class="meter"><i class="${cls}" style="width:${Math.max(pct,p.stock>0?6:0)}%"></i></div></td>
+      <td>${stockBadge(p)}</td>
+      <td class="num"><button class="btn sec sm" data-act="edit" data-id="${p.id}">Edit</button>
+        <button class="btn sm ${p.active?'danger':'ok'}" data-act="toggle" data-id="${p.id}">${p.active?'Deactivate':'Reactivate'}</button>
+        <button class="btn sec sm" style="color:var(--danger)" data-act="delete" data-id="${p.id}">Delete</button></td></tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty"><b>📦</b>${state.products.length?'No products match your filters.':'No products yet — click “Add product” to get started.'}</td></tr>`;
+}
+
+/* product dialog */
+let editingId = null;
+const pd = $('#productDialog');
+function openProductDialog(p){
+  editingId = p ? p.id : null;
+  $('#pdTitle').textContent = p ? 'Edit product' : 'Add product';
+  $('#pName').value = p ? p.name : ''; $('#pCat').value = p ? p.category : '';
+  $('#pPrice').value = p ? p.price : ''; $('#pStock').value = p ? p.stock : '';
+  $('#pErr').textContent = '';
+  $('#catList').innerHTML = categories().map(c=>`<option value="${esc(c)}">`).join('');
+  pd.showModal(); $('#pName').focus();
+}
+$('#pCancel').onclick = () => pd.close();
+$('#productForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#pName').value.trim(), category = $('#pCat').value.trim() || 'Uncategorized';
+  const priceRaw = $('#pPrice').value, stockRaw = $('#pStock').value;
+  const price = Number(priceRaw), stock = Number(stockRaw);
+  const err = m => { $('#pErr').textContent = ''; void $('#pErr').offsetWidth; $('#pErr').textContent = m; };
+  if(!name) return err('Product name is required.');
+  if(priceRaw === '' || !isFinite(price) || price <= 0) return err('Enter a price greater than 0.');
+  if(Math.abs(price*100 - Math.round(price*100)) > 1e-6) return err('Price can have at most 2 decimal places.');
+  if(stockRaw === '' || !Number.isInteger(stock) || stock < 0) return err('Stock must be a whole number, 0 or more.');
+  if(state.products.some(p => p.id !== editingId && p.name.toLowerCase() === name.toLowerCase())) return err('A product with this name already exists.');
+  const rounded = Math.round(price*100)/100;
+  const saveBtn = $('#productForm button[type="submit"]'); saveBtn.disabled = true;
+  try{
+    if(editingId){
+      await api(`/products/${editingId}`, {method:'PUT', body:{name, category, price:rounded, stock}});
+      const p = getProduct(editingId); Object.assign(p, {name, category, price:rounded, stock});
+      cart.forEach(c => { if(c.pid===p.id && c.qty>p.stock) c.qty = p.stock; });
+      cart = cart.filter(c => c.qty > 0);
+      toast('Product updated.');
+    } else {
+      state.products.push(await api('/products', {method:'POST', body:{name, category, price:rounded, stock}}));
+      toast('Product added.');
+    }
+  }catch(ex){ saveBtn.disabled = false; return err(ex.message); }
+  saveBtn.disabled = false;
+  pd.close(); refreshCatFilter(); drawProducts(true);
+});
+
+/* ================= Module 3: Checkout ================= */
+let cq = '', cc = '', lastAdded = null;
+const inCart = pid => { const c = cart.find(c=>c.pid===pid); return c ? c.qty : 0; };
+const cartTotalCents = () => cart.reduce((a,c)=>{ const p=getProduct(c.pid); return a + (p ? toCents(p.price)*c.qty : 0); },0);
+
+function renderCheckout(){
+  $('#app').innerHTML = `<div class="view">
+    <div class="page-head"><div><h1>Checkout</h1><p>Pick products, take cash, and the stock updates itself.</p></div></div>
+    <div class="checkout">
+      <div>
+        <div class="toolbar"><div class="search">${icon.search}<input id="cQ" type="search" placeholder="Search products to sell…" value="${esc(cq)}"></div></div>
+        <div class="chips" id="chips"></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <div class="card cart"><h3>🧺 Current sale</h3><div id="cartBox"></div></div>
+    </div></div>`;
+  $('#cQ').oninput = e => { cq = e.target.value; drawTiles(false); };
+  $('#chips').onclick = e => { const b = e.target.closest('.chip'); if(!b) return; cc = b.dataset.cat; drawChips(); drawTiles(true); };
+  $('#tiles').onclick = e => {
+    const st = e.target.closest('button[data-step]');
+    if(st){
+      const pid = st.dataset.pid, p = getProduct(pid), inp = $(`input[data-qty="${pid}"]`);
+      const maxQ = Math.max(1, p.stock - inCart(pid));
+      inp.value = Math.min(maxQ, Math.max(1, (parseInt(inp.value,10)||1) + Number(st.dataset.step)));
+      return;
+    }
+    const b = e.target.closest('button[data-add]'); if(!b) return;
+    const pid = b.dataset.add, p = getProduct(pid), qIn = $(`input[data-qty="${pid}"]`);
+    const qty = Number(qIn.value);
+    if(!Number.isInteger(qty) || qty < 1) return toast('Quantity must be a whole number of at least 1.', true);
+    const avail = p.stock - inCart(pid);
+    if(qty > avail) return toast(`Only ${avail} more of "${p.name}" available.`, true);
+    const line = cart.find(c=>c.pid===pid);
+    if(line) line.qty += qty; else cart.push({pid, qty});
+    lastAdded = pid; drawTiles(false); drawCart();
+  };
+  drawChips(); drawTiles(true); drawCart();
+}
+function drawChips(){
+  const cats = [...new Set(state.products.filter(p=>p.active).map(p=>p.category))].sort((a,b)=>a.localeCompare(b));
+  if(cc && !cats.includes(cc)) cc = '';
+  $('#chips').innerHTML = [''].concat(cats).map(c=>`<button class="chip ${c===cc?'on':''}" data-cat="${esc(c)}">${c?esc(c):'All'}</button>`).join('');
+}
+function drawTiles(animate){
+  const q = cq.trim().toLowerCase();
+  const rows = state.products.filter(p => p.active && (!cc || p.category===cc) && (!q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  $('#tiles').innerHTML = rows.length ? rows.map((p,i)=>{
+    const avail = p.stock - inCart(p.id);
+    const badge = p.stock<=0 ? '<span class="badge b-out">Out</span>' : avail<=0 ? '<span class="badge b-off">All in cart</span>' : (p.stock<=state.lowStock ? `<span class="badge b-low">${avail} left</span>` : `<span class="badge b-ok">${avail} left</span>`);
+    return `<div class="tile ${avail<=0?'disabled':''}" style="--i:${animate?Math.min(i,14):0};${animate?'':'animation:none'}">
+      <div class="tile-top"><span class="cat">${esc(p.category)}</span>${badge}</div>
+      <div class="tile-name">${esc(p.name)}</div>
+      <div class="tile-price">${money(toCents(p.price))}</div>
+      <div class="tile-foot">
+        <div class="stepper"><button data-step="-1" data-pid="${p.id}" ${avail<=0?'disabled':''}>−</button><input type="number" min="1" step="1" value="1" data-qty="${p.id}" ${avail<=0?'disabled':''}><button data-step="1" data-pid="${p.id}" ${avail<=0?'disabled':''}>+</button></div>
+        <button class="btn sm" style="flex:1" data-add="${p.id}" ${avail<=0?'disabled':''}>Add</button>
+      </div></div>`;
+  }).join('') : `<div class="empty card" style="grid-column:1/-1"><b>🔍</b>${state.products.some(p=>p.active)?'No products match.':'No active products. Add some in the Products tab.'}</div>`;
+}
+function drawCart(){
+  const box = $('#cartBox');
+  const total = cartTotalCents();
+  const prevCash = $('#cash') ? $('#cash').value : '';
+  box.innerHTML = `
+    ${cart.length ? cart.map(c=>{ const p=getProduct(c.pid); const sub=toCents(p.price)*c.qty;
+      return `<div class="cart-item ${lastAdded===c.pid?'pop':''}" data-pid="${p.id}">
+        <div><strong>${esc(p.name)}</strong><div class="muted" style="font-size:12px">${money(toCents(p.price))} each</div></div>
+        <div class="stepper"><button data-cstep="-1" data-pid="${p.id}">−</button><span class="q">${c.qty}</span><button data-cstep="1" data-pid="${p.id}">+</button></div>
+        <div class="ci-sub">${money(sub)}</div>
+        <button class="icon-btn" data-rm="${p.id}" title="Remove">✕</button></div>`; }).join('')
+      : '<div class="empty"><b>🛒</b>Your cart is empty.<br>Add products from the left.</div>'}
+    <div class="sum-row" style="margin-top:10px"><span class="muted" style="font-weight:600">Total</span><span class="total" id="totalAmt">${money(total)}</span></div>
+    <div class="field"><label for="cash">Cash received (₱)</label><input id="cash" type="number" min="0" step="0.01" placeholder="0.00" value="${esc(prevCash)}" ${cart.length?'':'disabled'}></div>
+    <div class="quick" id="quick"></div>
+    <div class="sum-row"><span class="muted" style="font-weight:600">Change</span><span class="change" id="changeAmt">—</span></div>
+    <div class="err" id="saleErr"></div>
+    <div style="display:flex;gap:10px"><button class="btn sec" id="clearCart" ${cart.length?'':'disabled'}>Clear</button>
+      <button class="btn ok" style="flex:1" id="completeSale" ${cart.length?'':'disabled'}>Complete sale</button></div>`;
+  lastAdded = null;
+  drawQuick(total); updateChange();
+  $('#cash').oninput = updateChange;
+  $('#clearCart').onclick = () => { cart = []; drawTiles(false); drawCart(); };
+  $('#completeSale').onclick = completeSale;
+  box.onclick = e => {
+    const rm = e.target.closest('button[data-rm]');
+    if(rm){ removeLine(rm.dataset.rm); return; }
+    const cs = e.target.closest('button[data-cstep]');
+    if(cs){
+      const pid = cs.dataset.pid, p = getProduct(pid), line = cart.find(c=>c.pid===pid), nq = line.qty + Number(cs.dataset.cstep);
+      if(nq < 1) return removeLine(pid);
+      if(nq > p.stock) return toast(`Only ${p.stock} of "${p.name}" in stock.`, true);
+      line.qty = nq; drawTiles(false); drawCart(); return;
+    }
+    const q = e.target.closest('button[data-cash]');
+    if(q){ $('#cash').value = q.dataset.cash === 'exact' ? (total/100).toFixed(2) : q.dataset.cash; updateChange(); }
+  };
+}
+function removeLine(pid){
+  const el = $(`.cart-item[data-pid="${pid}"]`);
+  const done = () => { cart = cart.filter(c => c.pid !== pid); drawTiles(false); drawCart(); };
+  if(el && !reduced()){ el.classList.add('removing'); setTimeout(done, 260); } else done();
+}
+function drawQuick(total){
+  const q = $('#quick'); if(!q || !cart.length){ if(q) q.innerHTML=''; return; }
+  const t = total/100, opts = [...new Set([20,50,100,200,500,1000].filter(v=>v>=t).slice(0,3))];
+  q.innerHTML = `<button class="chip" data-cash="exact">Exact</button>` + opts.map(v=>`<button class="chip" data-cash="${v}">₱${v}</button>`).join('');
+}
+function updateChange(){
+  const cashEl = $('#cash'), out = $('#changeAmt'); if(!cashEl) return;
+  if(cashEl.value === '' || !cart.length){ out.textContent = '—'; out.className = 'change'; return; }
+  const diff = toCents(cashEl.value) - cartTotalCents();
+  if(diff < 0){ out.textContent = `Short ${money(-diff)}`; out.className = 'change bad'; }
+  else { out.textContent = money(diff); out.className = 'change'; }
+}
+async function completeSale(){
+  const err = m => { const el = $('#saleErr'); el.textContent=''; void el.offsetWidth; el.textContent = m; };
+  err('');
+  if(!cart.length) return err('Add at least one item.');
+  for(const c of cart){
+    const p = getProduct(c.pid);
+    if(!p || !p.active) return err('A product in the cart is no longer active. Remove it.');
+    if(!Number.isInteger(c.qty) || c.qty < 1) return err(`Invalid quantity for ${p.name}.`);
+    if(c.qty > p.stock) return err(`Not enough stock for "${p.name}" (available: ${p.stock}).`);
+  }
+  const cashRaw = $('#cash').value;
+  if(cashRaw === '' || !isFinite(Number(cashRaw))) return err('Enter the cash received.');
+  const total = cartTotalCents(), tendered = toCents(cashRaw);
+  if(tendered < total) return err(`Cash is short by ${money(total - tendered)}.`);
+  const btn = $('#completeSale'); btn.disabled = true;
+  let sale;
+  try{
+    // the server re-checks stock and prices, deducts stock and saves the sale in one Firestore transaction
+    sale = await api('/checkout', {method:'POST', body:{items:cart.map(c=>({pid:c.pid, qty:c.qty})), cash:Number(cashRaw)}});
+  }catch(ex){
+    btn.disabled = false; err(ex.message);
+    try{ await loadAll(); drawTiles(false); }catch(e2){}  // refresh stock in case it changed elsewhere
+    return;
+  }
+  sale.items.forEach(i => { const p = getProduct(i.pid); if(p) p.stock -= i.qty; });
+  state.sales.push(sale); cart = [];
+  $('#receiptBody').innerHTML = `
+    <div class="muted" style="text-align:center">Transaction #${sale.number} · ${fmtDateTime(sale.ts)}</div>
+    <div class="receipt-items">${sale.items.map(i=>`<div><span>${esc(i.name)} × ${i.qty}</span><strong>${money(i.subtotalCents)}</strong></div>`).join('')}</div>
+    <div class="sum-row"><span class="muted">Total</span><strong style="font-size:20px">${money(sale.totalCents)}</strong></div>
+    <div class="sum-row"><span class="muted">Cash</span><span>${money(sale.tenderedCents)}</span></div>
+    <div class="sum-row"><span class="muted">Change</span><strong class="change">${money(sale.changeCents)}</strong></div>`;
+  // restart the check animation each time
+  const svg = $('#receiptDialog .check-anim'); const clone = svg.cloneNode(true); svg.replaceWith(clone);
+  $('#receiptDialog').showModal(); confetti();
+}
+function confetti(){
+  if(reduced()) return;
+  const box = $('#confettiBox'); box.innerHTML = '';
+  const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4'];
+  for(let i=0;i<46;i++){
+    const s = document.createElement('span'); s.className = 'confetti';
+    const a = Math.random()*Math.PI*2, d = 120 + Math.random()*180;
+    s.style.cssText = `background:${colors[i%colors.length]};--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d*0.8+120}px;--r:${(Math.random()*720-360)|0}deg;animation-delay:${Math.random()*0.15}s`;
+    box.appendChild(s);
+  }
+  setTimeout(()=>{ box.innerHTML=''; }, 1800);
+}
+$('#receiptClose').onclick = () => { $('#receiptDialog').close(); if(currentView==='checkout') renderCheckout(); };
+
+/* ================= Module 4: Sales History ================= */
+let hf = {from:'', to:''};
+function renderHistory(){
+  $('#app').innerHTML = `<div class="view">
+    <div class="page-head"><div><h1>Sales History</h1><p>Review transactions and daily totals.</p></div></div>
+    <div class="toolbar">
+      <label class="check">From <input type="date" id="hFrom" value="${hf.from}"></label>
+      <label class="check">To <input type="date" id="hTo" value="${hf.to}"></label>
+      <button class="btn sec" id="hToday">Today</button><button class="btn sec" id="hAll">All dates</button>
+    </div>
+    <div id="hSummary" class="grid stats stagger"></div>
+    <div class="grid history-grid">
+      <div><h3>📅 Daily totals</h3><div class="tablewrap"><table>
+        <thead><tr><th>Date</th><th class="num">Txns</th><th class="num">Total</th></tr></thead><tbody id="dailyBody"></tbody></table></div></div>
+      <div><h3>🧾 Transactions</h3><div class="tablewrap"><table>
+        <thead><tr><th>#</th><th>Date &amp; time</th><th>Items</th><th class="num">Total</th><th class="num">Cash</th><th class="num">Change</th><th class="num">Actions</th></tr></thead>
+        <tbody id="txBody"></tbody></table></div></div>
+    </div></div>`;
+  const upd = () => { hf.from = $('#hFrom').value; hf.to = $('#hTo').value; drawHistory(); };
+  $('#hFrom').onchange = upd; $('#hTo').onchange = upd;
+  $('#hToday').onclick = () => { hf.from = hf.to = todayKey(); renderHistory(); };
+  $('#hAll').onclick = () => { hf.from = hf.to = ''; renderHistory(); };
+  $('#txBody').onclick = async e => {
+    const b = e.target.closest('button[data-hact]'); if(!b) return;
+    const s = state.sales.find(x => x.id === b.dataset.id); if(!s) return;
+    if(b.dataset.hact === 'edit') return openCashDialog(s);
+    const r = await askConfirm({title:`Delete transaction #${s.number}?`, message:`This removes the ${money(s.totalCents)} sale from your history and totals.`, yes:'Delete sale', option:'Return the items to stock'});
+    if(!r) return;
+    try{ await api(`/sales/${s.id}?restock=${r.option ? 1 : 0}`, {method:'DELETE'}); await loadAll(); }
+    catch(err){ return toast(err.message, true); }
+    toast('Sale deleted.' + (r.option ? ' Stock restored.' : '')); drawHistory();
+  };
+  drawHistory();
+}
+
+/* edit the cash received on a sale */
+let editingSale = null;
+function openCashDialog(s){
+  editingSale = s;
+  $('#cdInfo').textContent = `Transaction #${s.number} · total ${money(s.totalCents)}`;
+  $('#cdCash').value = (s.tenderedCents/100).toFixed(2); $('#cdErr').textContent = '';
+  $('#cashDialog').showModal(); $('#cdCash').select();
+}
+$('#cdCancel').onclick = () => $('#cashDialog').close();
+$('#cashForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const s = editingSale, raw = $('#cdCash').value;
+  const err = m => { $('#cdErr').textContent = ''; void $('#cdErr').offsetWidth; $('#cdErr').textContent = m; };
+  if(raw === '' || !isFinite(Number(raw))) return err('Enter the cash received.');
+  if(toCents(raw) < s.totalCents) return err(`Cash must be at least ${money(s.totalCents)}.`);
+  try{
+    const r = await api(`/sales/${s.id}`, {method:'PUT', body:{cash:Number(raw)}});
+    s.tenderedCents = r.tenderedCents; s.changeCents = r.changeCents;
+  }catch(ex){ return err(ex.message); }
+  $('#cashDialog').close(); toast('Sale updated.'); drawHistory();
+});
+function drawHistory(){
+  const sales = state.sales.filter(s => {
+    const k = dateKey(new Date(s.ts));
+    return (!hf.from || k >= hf.from) && (!hf.to || k <= hf.to);
+  }).slice().reverse();
+  const total = sales.reduce((a,s)=>a+s.totalCents,0);
+  const units = sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty,0),0);
+  $('#hSummary').innerHTML = `
+    <div class="card hover stat" style="--i:0"><div class="ico g1">${icon.cash}</div><div><div class="label">Sales in range</div><div class="value" data-count="${total}" data-mode="money">0</div></div></div>
+    <div class="card hover stat" style="--i:1"><div class="ico g2">${icon.receipt}</div><div><div class="label">Transactions</div><div class="value" data-count="${sales.length}">0</div></div></div>
+    <div class="card hover stat" style="--i:2"><div class="ico g3">${icon.box}</div><div><div class="label">Units sold</div><div class="value" data-count="${units}">0</div></div></div>`;
+  runCounters($('#hSummary'));
+  const byDay = {};
+  sales.forEach(s => { const k = dateKey(new Date(s.ts)); (byDay[k] = byDay[k] || {n:0,c:0}); byDay[k].n++; byDay[k].c += s.totalCents; });
+  const days = Object.keys(byDay).sort().reverse();
+  $('#dailyBody').innerHTML = days.length ? days.map((k,i)=>`<tr class="rowin" style="--i:${Math.min(i,12)}"><td>${fmtDate(k)}</td><td class="num">${byDay[k].n}</td><td class="num"><strong>${money(byDay[k].c)}</strong></td></tr>`).join('')
+    : '<tr><td colspan="3" class="empty"><b>📅</b>No data.</td></tr>';
+  $('#txBody').innerHTML = sales.length ? sales.map((s,i)=>`
+    <tr class="rowin" style="--i:${Math.min(i,12)}"><td><strong>${s.number}</strong></td><td>${fmtDateTime(s.ts)}</td>
+      <td><details><summary>${s.items.reduce((a,x)=>a+x.qty,0)} item(s)</summary>
+        <ul>${s.items.map(it=>`<li>${esc(it.name)} — ${it.qty} × ${money(it.priceCents)} = ${money(it.subtotalCents)}</li>`).join('')}</ul></details></td>
+      <td class="num"><strong>${money(s.totalCents)}</strong></td><td class="num">${money(s.tenderedCents)}</td><td class="num">${money(s.changeCents)}</td>
+      <td class="num"><button class="btn sec sm" data-hact="edit" data-id="${s.id}">Edit</button>
+        <button class="btn sec sm" style="color:var(--danger)" data-hact="del" data-id="${s.id}">Delete</button></td></tr>`).join('')
+    : '<tr><td colspan="7" class="empty"><b>🧾</b>No transactions found for this period.</td></tr>';
+}
+
+/* ================= Init ================= */
+(async function init(){
+  $('#app').innerHTML = '<div class="empty"><b>⏳</b>Loading.........</div>';
+  try{ await loadAll(); go('dashboard'); }
+  catch(e){
+    $('#app').innerHTML = `<div class="empty card"><b>⚠️</b>Could not load data from the server.<br><span class="muted">${esc(e.message)}</span><br><br><button class="btn" onclick="location.reload()">Retry</button></div>`;
+  }
+})();
+})();
+</script>
+</body>
+</html>

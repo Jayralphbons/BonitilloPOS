@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "bonitilloshop",
+  "private_key_id": "ed9544c3a2ae8ae315b17f9b8461d70931350e4c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC+alzVNyOHvd4R\nNiNXMarX6gSASNq1ZcHI6hLmCgE7oFL3t7sJtHczIIBhfXx3+n4lXt7gYi4nqPLo\niGJwcNp9Xy1Ge6ehk+oq3fWlmHOyuMaro7vBA5gkuibfqCnVxelY3S6RpVUNmNAp\ncPktRNT7VHuE2ocaVbFCl5aausYiR/+ZD1ZiF68W+87FPvsU+KfronvqX49C+3kN\n5rDb+0XStehSzD5y1/pvxbXSPWx3u/koDGM2/jbL263dkKyAPS8Li3EyNcyqxGqd\nX3YZBeeCSJdqTa5n8OuqRaKuC3sM694oQSzRKdVdcKyLz6prL7QR+0fTY68CopbD\nVxr9pGYfAgMBAAECggEABv/P48KAGtg+1nEgAW+A8SjX+4MyDuLrqZ/5C92oR/HP\nuu1VAblRfF6geXTsY1ig1GzVUngpbCnIrAV/YNS1I1ChUGrxMX5HaEX6Zpjg/9vM\n6bg+CY1BRXBWR3hd+U6qEisnMBFcvAA2/p75edGC5q4nUC3cM3qc5m6+CXf+Gnps\nw5yIi1kV/bfxdIzrBzcQ1jlA/drwKa9izy5wGH5Qc/tQ++/ZWspQXrhuQQItUxFv\nVyojRIi/2+Ihu1cJqHOER2miUmNRrAAdA6KWJGdJ4Vnsj3X/Gs3zgpo5TxUNHvow\nyWwkj+0jJA3N7khtrN6O5hT8eZagQwFwdVN7H1Bx8QKBgQDtYonDmh8amyFvKoYM\nroXbsMh6MwDnBtXuflIBtewpKtI+nPMTpPyhN98EvNkm6SXEO2grw2Z4A7s3ruCs\n2n86cGrgSPF3bayHZKm905czzis3vQgUm/YawPiz9SwUS3S0VhxIlTvHzgy+A1Ht\nQJ27ciRfRpxD9LBB68xT4C1oaQKBgQDNWOvJamNX7oX6YneDzI/o5DvAIyIVF/UH\nym1V5AXfTsE8VV/iXhkSwkiRQ0D0jfmGJ+NmdPjwV3vJckxs8gYj5x5Bof/InKa1\n3ysQQyevR1EivojO87fVbAnjAAi31dX6yQM0xyxRqF6DgwiHk1NnZN90+bFvxPje\n6MOVZ0LJRwKBgBuHQdKdHN5I/yeVFtaBpqRDa/w/zer8r/JoU7o/DpP3k0oPiWDN\n0T4g7IvwGn6YqviGqx3oGwnv5NYgQY3KCNcOElbQHrBq14cb9VM+JlqrnfdoxHcf\nXvrbRfwYgnQYDACdu8nvBG+3RWMDn4yT4bbLFcy2s4ht58K9RYS0io+BAoGBAIM7\nb7yR9BkvA4qHwS+G3PWOXq0lBtQKMnsfIA7DIgmbUB0ZxqRpVIbLiQrkuy9PSIc3\nGLnSyYD3t9F+7V62sbviKVDykgAINPaIQAItmMAIyM52jAIOeY64c/0ReYDa9NxH\n+HeTTjyFaJmNdTcHrUanjbM5G+99Jzt18ACcNG9jAoGAS+TIdrfvdRAnQcQN79Ae\nenFaY2Ab5zTr36sjwOys+HuDq7JaCUs+4fR908Ot69at7xo4NbJXNLO5XpRB2rMm\nhrfU98Teb0iuRlg6ybi10ZcUgvJWLOZyspuprLwXaZh9ISShpIXyjT47S20320LP\nkt7ksCJWKW62Pcnwp/lHuIs=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@bonitilloshop.iam.gserviceaccount.com",
+  "client_id": "107158779756232796011",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40bonitilloshop.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
