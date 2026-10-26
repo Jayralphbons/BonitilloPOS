@@ -1,0 +1,4 @@
+firebaseAPI.json
+.env
+.env.*
+!.env.example
