@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: bonitillo-pos
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: FIREBASE_CREDENTIALS
+        sync: false   # paste the full contents of firebaseAPI.json in the Render dashboard
+ 

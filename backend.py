@@ -9,6 +9,7 @@ Setup:
 
 Optional: set GOOGLE_APPLICATION_CREDENTIALS_FILE to use another key path.
 """
+import json
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -20,10 +21,23 @@ from werkzeug.exceptions import HTTPException
 
 # ---------- Firebase ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-KEY_PATH = os.environ.get(
-    "GOOGLE_APPLICATION_CREDENTIALS_FILE", os.path.join(BASE_DIR, "firebaseAPI.json")
-)
-firebase_admin.initialize_app(credentials.Certificate(KEY_PATH))
+
+def load_credentials():
+    """Local: firebaseAPI.json. Render: FIREBASE_CREDENTIALS env var (full JSON) or a Secret File."""
+    raw = os.environ.get("FIREBASE_CREDENTIALS")
+    if raw:
+        return credentials.Certificate(json.loads(raw))
+    for path in (
+        os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_FILE"),
+        os.path.join(BASE_DIR, "firebaseAPI.json"),
+        "/etc/secrets/firebaseAPI.json",  # Render Secret Files location
+    ):
+        if path and os.path.exists(path):
+            return credentials.Certificate(path)
+    raise RuntimeError("No Firebase credentials found. Set FIREBASE_CREDENTIALS on Render.")
+
+
+firebase_admin.initialize_app(load_credentials())
 
 # Your Firestore database is named "default" (shown without parentheses in the console).
 # If you recreate it with the standard ID "(default)", set this to None.
@@ -334,4 +348,4 @@ def dashboard():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1", port=int(os.environ.get("PORT", 5000)))
